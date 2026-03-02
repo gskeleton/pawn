@@ -1381,7 +1381,7 @@ static int hier2(value *lval)
         lval->constval= (idxsym!=NULL && idxsym->dim.array.length>0) ? idxsym->dim.array.length : 1;
       else
         lval->constval=array_levelsize(sym,level);
-      if (lval->constval==0 && strchr((char *)lptr,PREPROC_TERM)==NULL)
+      if (lval->constval==0 && strchr((char *)lexptr,PREPROC_TERM)==NULL)
         error(224,sym->name);          /* indeterminate array size in "sizeof" expression */
     } /* if */
     ldconst(lval->constval,sPRI);

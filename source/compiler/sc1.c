@@ -83,7 +83,7 @@ static void initglobals(void);
 static char *get_extension(char *filename);
 static void setopt(int argc,char **argv,char *oname,char *ename,char *pname,
                    char *rname,char *codepage);
-static void setconfig(char *root);
+static void setconfig(const char *root);
 static void setcaption(void);
 static void about(void);
 static void setconstants(void);
@@ -92,7 +92,7 @@ static void parse(void);
 static void dumplits(void);
 static void dumpzero(int count);
 static void declfuncvar(int fpublic,int fstatic,int fstock,int fconst);
-static void declglb(char *firstname,int firsttag,int fpublic,int fstatic,
+static void declglb(const char *firstname,int firsttag,int fpublic,int fstatic,
                     int stock,int fconst);
 static int declloc(int fstatic);
 static void decl_const(int table);
@@ -109,9 +109,9 @@ static cell init(int ident,int *tag,int *errorfound);
 static int getstates(const char *funcname);
 static void attachstatelist(symbol *sym, int state_id);
 static void funcstub(int fnative);
-static int newfunc(char *firstname,int firsttag,int fpublic,int fstatic,int stock);
+static int newfunc(const char *firstname,int firsttag,int fpublic,int fstatic,int stock);
 static int declargs(symbol *sym,int chkshadow);
-static void doarg(char *name,int ident,int offset,int tags[],int numtags,
+static void doarg(char *name,int ident,int offset,const int tags[],int numtags,
                   int fpublic,int fconst,int chkshadow,arginfo *arg);
 static void make_report(symbol *root,FILE *log,char *sourcefile);
 static void reduce_referrers(symbol *root);
@@ -169,7 +169,7 @@ static int verbosity  = 1;      /* verbosity level, 0=quiet, 1=normal, 2=verbose
 static int sc_reparse = 0;      /* needs 3th parse because of changed prototypes? */
 static int sc_parsenum = 0;     /* number of the extra parses */
 static int wq[wqTABSZ];         /* "while queue", internal stack for nested loops */
-static int *wqptr;              /* pointer to next entry */
+static int *wq_ptr;              /* pointer to next entry */
 #if !defined SC_LIGHT
   static char sc_rootpath[_MAX_PATH];
   static char *sc_documentation=NULL;/* main documentation */
@@ -222,10 +222,10 @@ int pc_printf(const char *message,...)
  */
 int pc_error(int number,char *message,char *filename,int firstline,int lastline,va_list argptr)
 {
-static char *prefix[3]={ "error", "fatal error", "warning" };
+static const char *prefix[3]={ "error", "fatal error", "warning" };
 
   if (number!=0) {
-    char *pre;
+    const char *pre;
 
     pre=prefix[number/100];
     if (number>=200 && pc_geterrorwarnings()){
@@ -255,7 +255,7 @@ static char *prefix[3]={ "error", "fatal error", "warning" };
  *    Several "source files" may be open at the same time. Specifically, one
  *    file can be open for reading and another for writing.
  */
-void *pc_opensrc(char *filename)
+void *pc_opensrc(const char *filename)
 {
   return fopen(filename,"r");
 }
@@ -272,7 +272,7 @@ void *pc_opensrc(char *filename)
  *    Several "source files" may be open at the same time. Specifically, one
  *    file can be open for reading and another for writing.
  */
-void *pc_createsrc(char *filename)
+void *pc_createsrc(const char *filename)
 {
   return fopen(filename,"w");
 }
@@ -367,7 +367,7 @@ int pc_eofsrc(void *handle)
 /* should return a pointer, which is used as a "magic cookie" to all I/O
  * functions; return NULL for failure
  */
-void *pc_openasm(char *filename)
+void *pc_openasm(const char *filename)
 {
   #if defined __MSDOS__ || defined SC_LIGHT
     return fopen(filename,"w+");
@@ -424,7 +424,7 @@ char *pc_readasm(void *handle, char *string, int maxchars)
 /* Should return a pointer, which is used as a "magic cookie" to all I/O
  * functions; return NULL for failure.
  */
-void *pc_openbin(char *filename)
+void *pc_openbin(const char *filename)
 {
   FILE *fbin;
 
@@ -735,62 +735,64 @@ cleanup:
     binf=NULL;
   } /* if */
 
-  #if !defined SC_LIGHT
-    if (errnum==0 && strlen(errfname)==0) {
-      int recursion;
-      long stacksize=max_stacksize(&glbtab,&recursion);
-      int flag_exceed=0;
-      if (pc_amxlimit>0) {
-        long totalsize=hdrsize+code_idx;
-        if (pc_amxram==0)
-          totalsize+=(glb_declared+pc_stksize)*sizeof(cell);
-        if (totalsize>=pc_amxlimit)
-          flag_exceed=1;
-      } /* if */
-      if (pc_amxram>0 && (glb_declared+pc_stksize)*sizeof(cell)>=(unsigned long)pc_amxram)
+#if !defined SC_LIGHT
+  if (errnum==0 && strlen(errfname)==0) {
+    int recursion;
+    long stacksize=max_stacksize(&glbtab,&recursion);
+    int flag_exceed=0;
+    if (pc_amxlimit>0) {
+      long totalsize=hdrsize+code_idx;
+      if (pc_amxram==0)
+        totalsize+=(glb_declared+pc_stksize)*sizeof(cell);
+      if (totalsize>=pc_amxlimit)
         flag_exceed=1;
-      char buffer[528]={0};
-      int len;
-      if ((sc_debug & sSYMBOLIC)!=0 || verbosity>=2 || stacksize+32>=(long)pc_stksize || flag_exceed) {
-        if (warnnum>0)
-          (void)putchar('\n');
-        len=snprintf(buffer,sizeof(buffer),"* Header size..........: %8ld bytes\n",(long)hdrsize);
-        fwrite(buffer,1,len,stdout);
-        fflush(stdout);
-        len=snprintf(buffer,sizeof(buffer),"* Code size............: %8ld bytes\n",(long)code_idx);
-        fwrite(buffer,1,len,stdout);
-        fflush(stdout);
-        len=snprintf(buffer,sizeof(buffer),"* Data size............: %8ld bytes\n",(long)glb_declared*sizeof(cell));
-        fwrite(buffer,1,len,stdout);
-        fflush(stdout);
-        len=snprintf(buffer,sizeof(buffer),"* Stack/heap size......: %8ld bytes; ",(long)pc_stksize*sizeof(cell));
-        fwrite(buffer,1,len,stdout);
-        fflush(stdout);
-        fputs("estimated max. usage",stdout);
-        if (recursion)
-          fputs(": unknown, due to recursion\n",stdout);
-        else if ((pc_memflags & suSLEEP_INSTR)!=0)
-          fputs(": unknown, due to the \"sleep\" instruction\n",stdout);
-        else
-        len=snprintf(buffer,sizeof(buffer),"=%ld cells (%ld bytes)\n",stacksize,stacksize*sizeof(cell));
-        fwrite(buffer,1,len,stdout);
-        fflush(stdout);
-        len=snprintf(buffer,sizeof(buffer),"* Total requirements...: %8ld bytes\n", (long)hdrsize+(long)code_idx+(long)glb_declared*sizeof(cell)+(long)pc_stksize*sizeof(cell));
-        fwrite(buffer,1,len,stdout);
-        fflush(stdout);
-      } /* if */
-      if (flag_exceed)
-        error(106,pc_amxlimit+pc_amxram); /* this causes a jump back to label "cleanup" */
     } /* if */
-  #endif
+    if (pc_amxram>0 && (glb_declared+pc_stksize)*sizeof(cell)>=(unsigned long)pc_amxram)
+      flag_exceed=1;
+    char buffer[528]={0};
+    int len;
+    if ((sc_debug & sSYMBOLIC)!=0 || verbosity>=2 || stacksize+32>=(long)pc_stksize || flag_exceed) {
+      if (warnnum>0)
+        (void)putchar('\n');
+      len=snprintf(buffer,sizeof(buffer),"* Header size..........: %8ld bytes\n",(long)hdrsize);
+      fwrite(buffer,1,len,stdout);
+      fflush(stdout);
+      len=snprintf(buffer,sizeof(buffer),"* Code size............: %8ld bytes\n",(long)code_idx);
+      fwrite(buffer,1,len,stdout);
+      fflush(stdout);
+      len=snprintf(buffer,sizeof(buffer),"* Data size............: %8ld bytes\n",(long)glb_declared*sizeof(cell));
+      fwrite(buffer,1,len,stdout);
+      fflush(stdout);
+      len=snprintf(buffer,sizeof(buffer),"* Stack/heap size......: %8ld bytes; ",(long)pc_stksize*sizeof(cell));
+      fwrite(buffer,1,len,stdout);
+      fflush(stdout);
+      fputs("estimated max. usage",stdout);
+      if (recursion)
+        fputs(": unknown, due to recursion\n",stdout);
+      else if ((pc_memflags & suSLEEP_INSTR)!=0)
+        fputs(": unknown, due to the \"sleep\" instruction\n",stdout);
+      else
+      len=snprintf(buffer,sizeof(buffer),"=%ld cells (%ld bytes)\n",stacksize,stacksize*sizeof(cell));
+      fwrite(buffer,1,len,stdout);
+      fflush(stdout);
+      len=snprintf(buffer,sizeof(buffer),"* Total requirements...: %8ld bytes\n", (long)hdrsize+(long)code_idx+(long)glb_declared*sizeof(cell)+(long)pc_stksize*sizeof(cell));
+      fwrite(buffer,1,len,stdout);
+      fflush(stdout);
+    } /* if */
+    if (flag_exceed)
+      error(106,pc_amxlimit+pc_amxram); /* this causes a jump back to label "cleanup" */
+  } /* if */
+#endif
 
   if (inpfname!=NULL) {
     if (get_sourcefile(1)!=NULL)
       remove(inpfname);         /* the "input file" was in fact a temporary file */
     free(inpfname);
   } /* if */
-  if (litq!=NULL)
+  if (litq!=NULL) {
     free(litq);
+  } /* if */
+
   stgbuffer_cleanup();
   clearstk();
   assert(jmpcode!=0 || loctab.next==NULL);/* on normal flow, local symbols
@@ -956,6 +958,7 @@ static void initglobals(void)
   warnnum=0;             /* number of warnings */
   optproccall=TRUE;      /* support "procedure call" */
   verbosity=1;           /* verbosity level, no copyright banner */
+  pc_recursion=FALSE;    /* recursion FALSE (int 0) by default */
   sc_debug=sCHKBOUNDS;   /* by default: bounds checking+assertions */
   pc_optimize=sOPTIMIZE_NOMACRO;
   sc_packstr=FALSE;      /* strings are unpacked by default */
@@ -986,11 +989,11 @@ static void initglobals(void)
   libname_tab.first=libname_tab.last=NULL; /* library table (#pragma library "..." syntax) */
 
   pline[0]='\0';         /* the line read from the input file */
-  lptr=NULL;             /* points to the current position in "pline" */
+  lexptr=NULL;           /* points to the current position in "pline" */
   curlibrary=NULL;       /* current library */
   inpf_org=NULL;         /* main source file */
 
-  wqptr=wq;              /* initialize while queue pointer */
+  wq_ptr=wq;              /* initialize while queue pointer */
 
 #if !defined SC_LIGHT
   sc_documentation=NULL;
@@ -1016,7 +1019,7 @@ static char *get_extension(char *filename)
  * Set the default extension, or force an extension. To erase the
  * extension of a filename, set "extension" to an empty string.
  */
-SC_FUNC void set_extension(char *filename,char *extension,int force)
+SC_FUNC void set_extension(char *filename,const char *extension,int force)
 {
   char *ptr;
 
@@ -1441,7 +1444,7 @@ static void setopt(int argc,char **argv,char *oname,char *ename,char *pname,
 #if defined __BORLANDC__ || defined __WATCOMC__
   #pragma argsused
 #endif
-static void setconfig(char *root)
+static void setconfig(const char *root)
 {
   #if defined macintosh
     insert_path(":include:");
@@ -2112,7 +2115,7 @@ static void declfuncvar(int fpublic,int fstatic,int fstock,int fconst)
  *
  *  global references: glb_declared     (altered)
  */
-static void declglb(char *firstname,int firsttag,int fpublic,int fstatic,int fstock,int fconst)
+static void declglb(const char *firstname,int firsttag,int fpublic,int fstatic,int fstock,int fconst)
 {
   int ident,tag,ispublic;
   int idxtag[sDIMEN_MAX];
@@ -3806,7 +3809,7 @@ static void funcstub(int fnative)
  *                     glb_declared (altered)
  *                     sc_alignnext (altered)
  */
-static int newfunc(char *firstname,int firsttag,int fpublic,int fstatic,int stock)
+static int newfunc(const char *firstname,int firsttag,int fpublic,int fstatic,int stock)
 {
   symbol *sym;
   int argcnt,tok,tag,funcline;
@@ -4248,7 +4251,7 @@ static int declargs(symbol *sym,int chkshadow)
  *  "fpublic" indicates whether the function for this argument list is public.
  *  The arguments themselves are never public.
  */
-static void doarg(char *name,int ident,int offset,int tags[],int numtags,
+static void doarg(char *name,int ident,int offset,const int tags[],int numtags,
                   int fpublic,int fconst,int chkshadow,arginfo *arg)
 {
   symbol *argsym;
@@ -4317,10 +4320,10 @@ static void doarg(char *name,int ident,int offset,int tags[],int numtags,
           paranthese++;
         if (needtoken(tSYMBOL)) {
           /* save the name of the argument whose size id to take */
-          char *name;
+          char *symname;
           cell val;
-          tokeninfo(&val,&name);
-          if ((arg->defvalue.size.symname=duplicatestring(name)) == NULL)
+          tokeninfo(&val,&symname);
+          if ((arg->defvalue.size.symname=duplicatestring(symname)) == NULL)
             error(103);         /* insufficient memory */
           arg->defvalue.size.level=0;
           if (size_tag_token==uSIZEOF) {
@@ -5488,13 +5491,13 @@ static void statement(int *lastindent,int allow_decl)
   case tEMIT:
   case t__EMIT: {
     extern char *sc_tokens[];
-    const unsigned char *bck_lptr=lptr-strlen(sc_tokens[tok-tFIRST]);
+    const unsigned char *bck_lptr=lexptr-strlen(sc_tokens[tok-tFIRST]);
     if (matchtoken('{')) {
       emit_flags |= efBLOCK;
       lastst=tEMIT;
       break;
     } /* if */
-    lptr=bck_lptr;
+    lexptr=bck_lptr;
     lexclr(FALSE);
     tok=lex(&val,&st);
   } /* case */
@@ -5520,7 +5523,7 @@ static void compound(int stmt_sameline,int starttok)
   /* if there is more text on this line, we should adjust the statement indent */
   if (stmt_sameline) {
     int i;
-    const unsigned char *p=lptr;
+    const unsigned char *p=lexptr;
     /* go back to the opening brace */
     while (*p!=starttok) {
       assert(p>pline);
@@ -7008,9 +7011,9 @@ SC_FUNC void emit_parse_line(void)
     /* move back to the start of the last fetched token
      * and copy the instruction name
      */
-    lptr-=len;
-    for (i=0; i<sizeof(name)-1 && (isalnum(*lptr) || *lptr == '.'); ++i,++lptr)
-      name[i]=(char)tolower(*lptr);
+    lexptr-=len;
+    for (i=0; i<sizeof(name)-1 && (isalnum(*lexptr) || *lexptr == '.'); ++i,++lexptr)
+      name[i]=(char)tolower(*lexptr);
     name[i]='\0';
 
     /* find the corresponding argument handler and call it */
@@ -7037,9 +7040,9 @@ SC_FUNC void emit_parse_line(void)
     /* make sure the string only contains whitespaces
      * and an optional trailing '}'
      */
-    while (*lptr<=' ' && *lptr!='\0')
-      lptr++;
-    if (*lptr!='\0' && *lptr!='}')
+    while (*lexptr<=' ' && *lexptr!='\0')
+      lexptr++;
+    if (*lexptr!='\0' && *lexptr!='}')
       error(38);  /* extra characters on line */
   } /* if */
 }
@@ -7203,7 +7206,7 @@ static void doreturn(void)
 
 static void dobreak(void)
 {
-  int *ptr;
+  const int *ptr;
 
   endlessloop=0;      /* if we were inside an endless loop, we just jumped out */
   ptr=readwhile();      /* readwhile() gives an error if not in loop */
@@ -7217,7 +7220,7 @@ static void dobreak(void)
 
 static void docont(void)
 {
-  int *ptr;
+  const int *ptr;
 
   ptr=readwhile();      /* readwhile() gives an error if not in loop */
   needtoken(tTERM);
@@ -7389,12 +7392,12 @@ static void addwhile(int *ptr)
   ptr[wqCONT]=(int)declared;    /* for "continue", possibly adjusted later */
   ptr[wqLOOP]=getlabel();
   ptr[wqEXIT]=getlabel();
-  if (wqptr>=(wq+wqTABSZ-wqSIZE))
+  if (wq_ptr>=(wq+wqTABSZ-wqSIZE))
     error(102,"loop table");    /* loop table overflow (too many active loops)*/
   k=0;
   while (k<wqSIZE){     /* copy "ptr" to while queue table */
-    *wqptr=*ptr;
-    wqptr+=1;
+    *wq_ptr=*ptr;
+    wq_ptr+=1;
     ptr+=1;
     k+=1;
   } /* while */
@@ -7402,16 +7405,16 @@ static void addwhile(int *ptr)
 
 static void delwhile(void)
 {
-  if (wqptr>wq)
-    wqptr-=wqSIZE;
+  if (wq_ptr>wq)
+    wq_ptr-=wqSIZE;
 }
 
 static int *readwhile(void)
 {
-  if (wqptr<=wq){
+  if (wq_ptr<=wq){
     error(24);          /* out of context */
     return NULL;
   } else {
-    return (wqptr-wqSIZE);
+    return (wq_ptr-wqSIZE);
   } /* if */
 }

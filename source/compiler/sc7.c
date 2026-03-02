@@ -1657,7 +1657,7 @@ static int matchsequence(char *start,char *end,char *pattern,
 
 static char *replacesequence(char *pattern,char symbols[MAX_OPT_VARS][MAX_ALIAS+1],int *repl_length)
 {
-  char *lptr;
+  char *lexptr;
   int var;
   char *buffer;
 
@@ -1668,13 +1668,13 @@ static char *replacesequence(char *pattern,char symbols[MAX_OPT_VARS][MAX_ALIAS+
    */
   assert(repl_length!=NULL);
   *repl_length=0;
-  lptr=pattern;
-  while (*lptr) {
-    switch (*lptr) {
+  lexptr=pattern;
+  while (*lexptr) {
+    switch (*lexptr) {
     case '%':
-      lptr++;           /* skip '%' */
-      assert(isdigit(*lptr));
-      var=atoi(lptr) - 1;
+      lexptr++;           /* skip '%' */
+      assert(isdigit(*lexptr));
+      var=atoi(lexptr) - 1;
       assert(var>=0 && var<MAX_OPT_VARS);
       assert(symbols[var][0]!='\0');    /* variable should be defined */
       *repl_length+=strlen(symbols[var]);
@@ -1685,7 +1685,7 @@ static char *replacesequence(char *pattern,char symbols[MAX_OPT_VARS][MAX_ALIAS+
     default:
       *repl_length+=1;
     } /* switch */
-    lptr++;
+    lexptr++;
   } /* while */
 
   /* allocate a buffer to replace the sequence in */
@@ -1695,10 +1695,10 @@ static char *replacesequence(char *pattern,char symbols[MAX_OPT_VARS][MAX_ALIAS+
   } /* if */
 
   /* replace the pattern into this temporary buffer */
-  lptr=buffer;
-  *lptr++='\t';         /* the "replace" patterns do not have tabs */
+  lexptr=buffer;
+  *lexptr++='\t';         /* the "replace" patterns do not have tabs */
   while (*pattern) {
-    assert((int)(lptr-buffer)<*repl_length);
+    assert((int)(lexptr-buffer)<*repl_length);
     switch (*pattern) {
     case '%':
       /* write out the symbol */
@@ -1707,23 +1707,23 @@ static char *replacesequence(char *pattern,char symbols[MAX_OPT_VARS][MAX_ALIAS+
       var=atoi(pattern) - 1;
       assert(var>=0 && var<MAX_OPT_VARS);
       assert(symbols[var][0]!='\0');    /* variable should be defined */
-      strcpy(lptr,symbols[var]);
-      lptr+=strlen(symbols[var]);
+      strcpy(lexptr,symbols[var]);
+      lexptr+=strlen(symbols[var]);
       break;
     case '!':
       /* finish the line, optionally start the next line with an indent */
-      *lptr++='\n';
-      *lptr++='\0';
+      *lexptr++='\n';
+      *lexptr++='\0';
       if (*(pattern+1)!='\0')
-        *lptr++='\t';
+        *lexptr++='\t';
       break;
     default:
-      *lptr++=*pattern;
+      *lexptr++=*pattern;
     } /* switch */
     pattern++;
   } /* while */
 
-  assert((int)(lptr-buffer)==*repl_length);
+  assert((int)(lexptr-buffer)==*repl_length);
   return buffer;
 }
 

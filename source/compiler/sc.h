@@ -557,8 +557,8 @@ int pc_printf(const char *message,...);
 int pc_error(int number,char *message,char *filename,int firstline,int lastline,va_list argptr);
 
 /* input from source file */
-void *pc_opensrc(char *filename); /* reading only */
-void *pc_createsrc(char *filename);
+void *pc_opensrc(const char *filename); /* reading only */
+void *pc_createsrc(const char *filename);
 void *pc_createtmpsrc(char **filename);
 void pc_closesrc(void *handle);   /* never delete */
 void pc_resetsrc(void *handle,void *position);  /* reset to a position marked earlier */
@@ -568,14 +568,14 @@ void *pc_getpossrc(void *handle); /* mark the current position */
 int  pc_eofsrc(void *handle);
 
 /* output to intermediate (.ASM) file */
-void *pc_openasm(char *filename); /* read/write */
+void *pc_openasm(const char *filename); /* read/write */
 void pc_closeasm(void *handle,int deletefile);
 void pc_resetasm(void *handle);
 int  pc_writeasm(void *handle,char *str);
 char *pc_readasm(void *handle,char *target,int maxchars);
 
 /* output to binary (.AMX) file */
-void *pc_openbin(char *filename);
+void *pc_openbin(const char *filename);
 void pc_closebin(void *handle,int deletefile);
 void pc_resetbin(void *handle,long offset);
 int  pc_writebin(void *handle,void *buffer,int size);
@@ -600,7 +600,7 @@ long pc_lengthbin(void *handle); /* return the length of the file */
 #endif
 
 /* function prototypes in SC1.C */
-SC_FUNC void set_extension(char *filename,char *extension,int force);
+SC_FUNC void set_extension(char *filename,const char *extension,int force);
 SC_FUNC symbol *fetchfunc(char *name,int tag);
 SC_FUNC char *operator_symname(char *symname,char *opername,int tag1,int tag2,int numtags,int resulttag);
 SC_FUNC void check_tagmismatch(int formaltag,int actualtag,int allowcoerce,int errline);
@@ -858,7 +858,7 @@ SC_VDECL struct hashtable_t symbol_cache_ht;
 SC_VDECL symbol *line_sym;
 SC_VDECL cell *litq;          /* the literal queue */
 SC_VDECL unsigned char pline[]; /* the line read from the input file */
-SC_VDECL const unsigned char *lptr;/* points to the current position in "pline" */
+SC_VDECL const unsigned char *lexptr;/* points to the current position in "pline" */
 SC_VDECL constvalue_root tagname_tab;/* tagname table */
 SC_VDECL constvalue_root libname_tab;/* library table (#pragma library "..." syntax) */
 SC_VDECL constvalue *curlibrary;/* current library */

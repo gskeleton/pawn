@@ -129,10 +129,10 @@ int pc_printf(const char *message,...)
  */
 int pc_error(int number,char *message,char *filename,int firstline,int lastline,va_list argptr)
 {
-static char *prefix[3]={ "error", "fatal error", "warning" };
+static const char *prefix[3]={ "error", "fatal error", "warning" };
 
   if (number!=0) {
-    char *pre;
+    const char *pre;
 
     pre=prefix[number/100];
     if (number>=200 && pc_geterrorwarnings()){
@@ -162,7 +162,7 @@ static char *prefix[3]={ "error", "fatal error", "warning" };
  *    Several "source files" may be open at the same time. Specifically, one
  *    file can be open for reading and another for writing.
  */
-void *pc_opensrc(char *filename)
+void *pc_opensrc(const char *filename)
 {
   return fopen(filename,"rt");
 }
@@ -179,7 +179,7 @@ void *pc_opensrc(char *filename)
  *    Several "source files" may be open at the same time. Specifically, one
  *    file can be open for reading and another for writing.
  */
-void *pc_createsrc(char *filename)
+void *pc_createsrc(const char *filename)
 {
   return fopen(filename,"wt");
 }
@@ -274,7 +274,7 @@ int pc_eofsrc(void *handle)
 /* should return a pointer, which is used as a "magic cookie" to all I/O
  * functions; return NULL for failure
  */
-void *pc_openasm(char *filename)
+void *pc_openasm(const char *filename)
 {
   #if defined __MSDOS__ || defined SC_LIGHT
     return fopen(filename,"w+t");
@@ -331,7 +331,7 @@ char *pc_readasm(void *handle, char *string, int maxchars)
 /* Should return a pointer, which is used as a "magic cookie" to all I/O
  * functions; return NULL for failure.
  */
-void *pc_openbin(char *filename)
+void *pc_openbin(const char *filename)
 {
   FILE *fbin;
 

@@ -36,7 +36,7 @@ SC_VDEFINE symbol glbtab;                   /* global symbol table */
 SC_VDEFINE struct hashtable_t symbol_cache_ht;
 SC_VDEFINE cell *litq;                      /* the literal queue */
 SC_VDEFINE unsigned char pline[sLINEMAX+1]; /* the line read from the input file */
-SC_VDEFINE const unsigned char *lptr;       /* points to the current position in "pline" */
+SC_VDEFINE const unsigned char *lexptr;       /* points to the current position in "pline" */
 SC_VDEFINE constvalue_root tagname_tab={ NULL, NULL};  /* tagname table */
 SC_VDEFINE constvalue_root libname_tab={ NULL, NULL};  /* library table (#pragma library "..." syntax) */
 SC_VDEFINE constvalue *curlibrary=NULL;     /* current library */
