@@ -753,7 +753,7 @@ cleanup:
       int len;
       if ((sc_debug & sSYMBOLIC)!=0 || verbosity>=2 || stacksize+32>=(long)pc_stksize || flag_exceed) {
         if (warnnum>0)
-          putchar('\n');
+          (void)putchar('\n');
         len=snprintf(buffer,sizeof(buffer),"* Header size..........: %8ld bytes\n",(long)hdrsize);
         fwrite(buffer,1,len,stdout);
         fflush(stdout);
@@ -825,7 +825,10 @@ cleanup:
   if (errnum!=0) {
     if (strlen(errfname)==0) {
       buffer[0]='\0';
-      len=snprintf(buffer,sizeof(buffer),"\n%d Error%s.\n",errnum,(errnum>1) ? "s" : "");
+      if (errnum>11)
+        len=snprintf(buffer,sizeof(buffer),"\n%d+ Error%s.\n",errnum,(errnum>1) ? "s" : "");
+      else
+        len=snprintf(buffer,sizeof(buffer),"\n%d Error%s.\n",errnum,(errnum>1) ? "s" : "");
       fwrite(buffer,1,len,stdout);
       fflush(stdout);
     }
@@ -1808,8 +1811,16 @@ static void parse(void)
       break;
     case tNEW:
     case tVAR:
-      if (getclassspec(tok,&fpublic,&fstatic,&fstock,&fconst))
+      if (getclassspec(tok,&fpublic,&fstatic,&fstock,&fconst)) {
+        if (!matchtoken(tSYMBOL)) {
+          strcpy(str,"[empty]");      /* \0 to [empty] */
+          error(20,str);              /* invalid symbol name */
+          lexclr(TRUE);               /* drop the rest of the line */
+          break;
+        } /* if */
+        lexpush();                    /* push back */
         declglb(NULL,0,fpublic,fstatic,fstock,fconst);
+      } /* if */
       break;
     case tSTATIC:
       if (matchtoken(tENUM)) {
@@ -2133,8 +2144,14 @@ static void declglb(char *firstname,int firsttag,int fpublic,int fstatic,int fst
       firstname=NULL;
     } else {
       tag=pc_addtag(NULL);
-      if (lex(&val,&str)!=tSYMBOL)      /* read in (new) token */
+      if (lex(&val,&str)!=tSYMBOL) {    /* read in (new) token */
+        if (strlen(str)<1) {
+          strcpy(str,"[empty]");   /* \0 to [empty] */
+          error(20,str);          /* invalid symbol name */
+          break;
+        } /* if */
         errorsuggest(20,str,NULL,estSYMBOL,essFUNCTN); /* invalid symbol name */
+      } /* if */
       assert(strlen(str)<=sNAMEMAX);
       strcpy(name,str);                 /* save symbol name */
     } /* if */
@@ -2978,8 +2995,16 @@ static void decl_const(int vclass)
   insert_docstring_separator();         /* see comment in newfunc() */
   do {
     tag=pc_addtag(NULL);
-    if (lex(&val,&str)!=tSYMBOL)        /* read in (new) token */
+    if (lex(&val,&str)!=tSYMBOL) {      /* read in (new) token */
+      if (strlen(str)<1) {
+        strcpy(str,"[empty]");   /* \0 to [empty] */
+        error(20,str);          /* invalid symbol name */
+        lexclr(TRUE);        /* drop rest of line */
+        litidx=0;            /* clear literal queue */
+        return;              /* STOP parsing */
+      } /* if */
       error(20,str);                    /* invalid symbol name */
+    } /* if */
     symbolline=fline;                   /* save line where symbol was found */
     strcpy(constname,str);              /* save symbol name */
     needtoken('=');
@@ -3818,6 +3843,11 @@ static int newfunc(char *firstname,int firsttag,int fpublic,int fstatic,int stoc
       check_operatortag(opertok,tag,symbolname);
     } else {
       if (tok!=tSYMBOL && freading) {
+        if (strlen(str)<1) {
+          strcpy(str,"[empty]");   /* \0 to [empty] */
+          error(20,str);          /* invalid symbol name */
+          return TRUE;
+        } /* if */
         error(20,str);          /* invalid symbol name */
         return FALSE;
       } /* if */
@@ -4970,6 +5000,8 @@ static int testsymbols(symbol *root,int level,int testlabs,int testconst)
         if ((sym->usage & uDEFINE)==0) {
           errorsuggest(19,sym->name,NULL,estSYMBOL,essLABEL); /* not a label: ... */
         } else if ((sym->usage & uREAD)==0) {
+          if (sym->name[0]=='\0' || strcmp(sym->name,"[empty]")==0)
+            break;
           errorset(sSETPOS,sym->lnumber);
           error(203,sym->name);     /* symbol isn't used: ... */
           errorset(sSETPOS,-1);
@@ -4990,6 +5022,8 @@ static int testsymbols(symbol *root,int level,int testlabs,int testconst)
       break;
     case iCONSTEXPR:
       if (testconst && (sym->usage & uREAD)==0) {
+        if (sym->name[0]=='\0' || strcmp(sym->name,"[empty]")==0)
+          break;
         errorset(sSETPOS,sym->lnumber);
         error(203,sym->name);       /* symbol isn't used: ... */
         errorset(sSETPOS,-1);
@@ -5000,6 +5034,8 @@ static int testsymbols(symbol *root,int level,int testlabs,int testconst)
       if (sym->parent!=NULL)
         break;                      /* hierarchical data type */
       if ((sym->usage & (uWRITTEN | uREAD | uSTOCK | uPUBLIC))==0) {
+        if (sym->name[0]=='\0' || strcmp(sym->name,"[empty]")==0)
+          break;
         errorset(sSETPOS,sym->lnumber);
         error(203,sym->name,sym->lnumber);  /* symbol isn't used (and not stock) */
         errorset(sSETPOS,-1);
@@ -5364,7 +5400,7 @@ static void statement(int *lastindent,int allow_decl)
   case tVAR:
     if (allow_decl) {
       declloc(FALSE);
-      lastst=tNEW;
+      lastst=tVAR;
     } else {
       error(3);                 /* declaration only valid in a block */
     } /* if */

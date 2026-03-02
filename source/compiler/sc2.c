@@ -1553,6 +1553,11 @@ static int command(void)
         if (!ret)
           error(17,str);        /* undefined or undeclared symbol */
       } else {
+        if (strlen(str)<1) {
+          strcpy(str,"[empty]");   /* \0 to [empty] */
+          error(20,str);          /* invalid symbol name */
+          break;
+        } /* if */
         error(20,str);          /* invalid symbol name */
       } /* if */
       check_empty(lptr);

@@ -321,7 +321,7 @@ static short lastfile;
   } /* if */
   va_end(argptr);
 
-  if ((number>=100 && number<200) || errnum>25) {
+  if ((number>=100 && number<200) || errnum>11) {
     if (errfname[0]=='\0') {
       va_start(argptr,number);
       va_end(argptr);
