@@ -1,10 +1,13 @@
-native printf(const format[], {Float,Fixed,_}:...);
+#include <console>
 
 main()
-    *begin
+    *begin /* { */
         *var counter = 0;
-        while (counter < 10)
-        *begin
-            printf("%d", counter);
+        while (counter != 10) *begin
+            ++counter;
+            printf("counter: %d", counter);
         *end
-    *end
+        *begin
+            printf("Hello, World!");
+        *end
+    *end /* } */

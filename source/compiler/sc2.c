@@ -209,7 +209,6 @@ SC_FUNC int plungequalifiedfile(char *name)
     ext=strchr(path,'\0');      /* save position */
     strcpy(ext,extensions[ext_idx]);
     strcpy(real_path,path);
-    normalize_path(real_path);
     int err=stat(real_path, &st);
     if (err==0 && !S_ISDIR(st.st_mode))   /* ignore directories with the same name */
       fp=(FILE*)pc_opensrc(real_path);
@@ -255,8 +254,7 @@ SC_FUNC int plungefile(char *name,int try_currentpath,int try_includepaths)
   char dirsep=DIRSEP_CHAR;
   int result=FALSE;
 
-  /*
-   * Previously, relative include paths with backslashes (e.g., "..\..\file.inc")
+  /* Previously, relative include paths with backslashes (e.g., "..\..\file.inc")
    * would fail on Linux/WSL because the file system only recognizes '/' as
    * the directory separator. This caused fatal error 100 when reading such
    * files.

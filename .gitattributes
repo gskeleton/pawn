@@ -1,3 +1,5 @@
 * text=auto
+*.p linguist-language=Pawn
 *.pwn linguist-language=Pawn
+*.pawn linguist-language=Pawn
 *.inc linguist-language=Pawn

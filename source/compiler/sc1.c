@@ -663,6 +663,7 @@ int pc_compile(int argc, char *argv[])
       } /* if */
     } /* if */
   #endif
+  
   if (sc_listing)
     goto cleanup;
 
@@ -775,7 +776,8 @@ cleanup:
       len=snprintf(buffer,sizeof(buffer),"=%ld cells (%ld bytes)\n",stacksize,stacksize*sizeof(cell));
       fwrite(buffer,1,len,stdout);
       fflush(stdout);
-      len=snprintf(buffer,sizeof(buffer),"* Total requirements...: %8ld bytes\n", (long)hdrsize+(long)code_idx+(long)glb_declared*sizeof(cell)+(long)pc_stksize*sizeof(cell));
+      len=snprintf(buffer,sizeof(buffer),"* Total requirements...: %8ld bytes\n",
+        (long)hdrsize+(long)code_idx+(long)glb_declared*sizeof(cell)+(long)pc_stksize*sizeof(cell));
       fwrite(buffer,1,len,stdout);
       fflush(stdout);
     } /* if */
