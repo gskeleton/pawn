@@ -1137,7 +1137,7 @@ static int command(void)
     check_empty(lexptr);
     break;
   case tpASSERT:
-    if (!SKIPPING && (sc_debug & sCHKBOUNDS)!=0) {
+    if (!SKIPPING) {
       for (str=(char*)lexptr; *str<=' ' && *str!='\0'; str++)
         /* nothing */;          /* save start of expression */
       preproc_expr(&val,NULL);  /* get constant expression (or 0 on error) */
@@ -1297,8 +1297,8 @@ static int command(void)
         } else if (strcmp(str,"naked")==0) {
           pc_naked=TRUE;
         } else if (strcmp(str,"warning")==0) {
-          int ok=lex(&val,&str)==tSYMBOL;
-          if (ok) {
+          int okay=lex(&val,&str)==tSYMBOL;
+          if (okay) {
             if (strcmp(str,"enable")==0) {
               cell val;
               do {
@@ -1316,11 +1316,11 @@ static int command(void)
             } else if (strcmp(str,"pop")==0) {
               pc_popwarnings();
             } else {
-              ok=FALSE;
+              okay=FALSE;
             }
           }
-          if (!ok) {
-            error(207);         /* unknown #pragma */
+          if (!okay) {
+            goto _unknown_pragma;
           }
         } else if (strcmp(str,"once")==0) {
           pragma_once_guard();
@@ -1334,14 +1334,13 @@ static int command(void)
             lexptr++;
           for (i=0; i<sNAMEMAX && *lexptr>' '; i++,lexptr++)
             name[i]=*lexptr;
-          /* [i] -> [i-1] serves as a correction to the following commit: b8dbbe9e433930206eb8bc974c1dce03ba14d300 */
           name[i-1]='\0';
           parsesingleoption(name);
         } else {
-          error(207);           /* unknown #pragma */
+          goto _unknown_pragma;
         } /* if */
       } else {
-        error(207);             /* unknown #pragma */
+        goto _unknown_pragma;
       } /* if */
       check_empty(lexptr);
     } /* if */
@@ -1566,7 +1565,6 @@ static int command(void)
 #endif
   case tpERROR:
   case tpWARNING:
-    /* empty warnings causing serves as a correction to the following commit: b1db8972b9a75f7e298236cbae1180d104a0ee1f */
     while (*lexptr<=' ' && *lexptr!='\0')
       lexptr++;
     if (!SKIPPING) {
@@ -1591,6 +1589,8 @@ static int command(void)
     ret=SKIPPING ? CMD_CONDFALSE : CMD_NONE;  /* process as normal line */
   } /* switch */
   return ret;
+_unknown_pragma:       /* unknown #pragma */
+  error(207); 
 }
 
 #if !defined NO_DEFINE
@@ -1960,6 +1960,7 @@ static const unsigned char *unpackedstring(const unsigned char *lexptr,int *flag
 {
   const unsigned char *stringize;
   int instring=1;
+  int brackets=0;
   if (*flags & STRINGIZE)                 /* ignore leading spaces after the # */
     while (*lexptr==' ' || *lexptr=='\t')     /* this is as defines with parameters may add them */
       lexptr++;                             /* when you use a space after , in a match pattern */
@@ -1976,6 +1977,7 @@ static const unsigned char *unpackedstring(const unsigned char *lexptr,int *flag
         lexptr--;
         instring=1;
         *flags |= STRINGIZE;
+        brackets=0;
       } else if (*lexptr==')' || *lexptr==',' || *lexptr=='}' || *lexptr==';' ||
                  *lexptr==':' || *lexptr=='\r' || *lexptr=='\n') {
         break;
@@ -1992,6 +1994,7 @@ static const unsigned char *unpackedstring(const unsigned char *lexptr,int *flag
         stringize++; /* find next non space */
       if (*stringize=='#') { /* new stringize string */
         lexptr=stringize+1;
+        brackets=0;
         while (*lexptr==' ' || *lexptr=='\t')
           lexptr++;
         continue;
@@ -1999,10 +2002,16 @@ static const unsigned char *unpackedstring(const unsigned char *lexptr,int *flag
         lexptr=stringize+1;
         *flags &= ~STRINGIZE;
         continue;
-      } else if (*stringize==',' || *stringize==')' || *stringize=='}' ||
-                 *stringize==';') { /* end */
-        lexptr=stringize;
-        break;
+      } else if (*stringize=='(') {
+        brackets++;
+      } else if (*stringize==')') {
+        if (brackets--==0)
+          break;
+      } else if (*stringize==',' || *stringize=='}' || *stringize==';') { /* end */
+        if (brackets==0) {
+          lexptr=stringize;
+          break;
+        }
       } else if (*stringize=='\0') {
         lexptr=stringize;
         *flags &= ~STRINGIZE; /* shouldn't happen - trigger an error */
@@ -2031,6 +2040,7 @@ static const unsigned char *packedstring(const unsigned char *lexptr,int *flags)
   ucell val,c;
   const unsigned char *stringize;
   int instring=1;
+  int brackets=0;
   if (*flags & STRINGIZE)
     while (*lexptr==' ' || *lexptr=='\t')
       lexptr++;
@@ -2049,6 +2059,7 @@ static const unsigned char *packedstring(const unsigned char *lexptr,int *flags)
         while (*++lexptr==' ' || *lexptr=='\t');
         lexptr--;
         instring=1;
+        brackets=0;
         *flags |= STRINGIZE;
       } else if (*lexptr==')' || *lexptr==',' || *lexptr=='}' || *lexptr==';' ||
                  *lexptr==':' || *lexptr=='\r' || *lexptr=='\n') {
@@ -2066,6 +2077,7 @@ static const unsigned char *packedstring(const unsigned char *lexptr,int *flags)
         stringize++; /* find next non space */
       if (*stringize=='#') { /* new stringize string */
         lexptr=stringize+1;
+        brackets=0;
         while (*lexptr==' ' || *lexptr=='\t')
           lexptr++;
         continue;
@@ -2073,10 +2085,16 @@ static const unsigned char *packedstring(const unsigned char *lexptr,int *flags)
         lexptr=stringize+1;
         *flags &= ~STRINGIZE;
         continue;
-      } else if (*stringize==',' || *stringize==')' || *stringize=='}' ||
-                 *stringize==';') { /* end */
-        lexptr=stringize;
-        break;
+      } else if (*stringize=='(') {
+        brackets++;
+      } else if (*stringize==')') {
+        if (brackets--==0)
+          break;
+      } else if (*stringize==',' || *stringize=='}' || *stringize==';') { /* end */
+        if (brackets==0) {
+          lexptr=stringize;
+          break;
+        }
       } else if (*stringize=='\0') {
         lexptr=stringize;
         *flags &= ~STRINGIZE; /* shouldn't happen - trigger an error */

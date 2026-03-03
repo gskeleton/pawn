@@ -941,6 +941,7 @@ static void resetglobals(void)
   sc_curstates=0;
   pc_memflags=0;
   pc_naked=FALSE;
+  pc_retexpr=FALSE;
   emit_flags=0;
   emit_stgbuf_idx=-1;
 }
@@ -2205,7 +2206,6 @@ static void declglb(const char *firstname,int firsttag,int fpublic,int fstatic,i
      */
     assert(sym==NULL
            || sym->states==NULL && sc_curstates==0
-           /* assert serves as a correction to the following commit: 14228a1cea48a85ea5c7cf8c24c576e76500e474 */
            || sym->states != NULL && sym->states->first != NULL && sym->states->first->index == sc_curstates);
     /* a state variable may only have a single id in its list (so either this
      * variable has no states, or it has a single list)
@@ -3031,6 +3031,7 @@ static void decl_enum(int vclass,int fstatic)
   char *str;
   int tag,explicittag;
   cell increment,multiplier;
+  int inctok;
   constvalue_root *enumroot=NULL;
   symbol *enumsym;
   short filenum;
@@ -3060,18 +3061,18 @@ static void decl_enum(int vclass,int fstatic)
     enumname[0]='\0';
   } /* if */
 
-  /* get increment and multiplier */
+  /* get the increment */
   increment=1;
-  multiplier=1;
+  inctok=taADD;
   if (matchtoken('(')) {
-    if (matchtoken(taADD)) {
+    int tok=lex(&val,&str);
+    if (tok==taADD || tok==taMULT || tok==taSHL) {
+      inctok=tok;
       constexpr(&increment,NULL,NULL);
-    } else if (matchtoken(taMULT)) {
-      constexpr(&multiplier,NULL,NULL);
-    } else if (matchtoken(taSHL)) {
-      constexpr(&val,NULL,NULL);
-      while (val-->0)
-        multiplier*=2;
+      if (tok==taSHL && increment<0)
+        increment=0;
+    } else {
+      lexpush();
     } /* if */
     needtoken(')');
   } /* if */
@@ -3102,7 +3103,6 @@ static void decl_enum(int vclass,int fstatic)
       lexpush();
       break;
     } /* if */
-    /* idxtag serves as a correction to the following commit: 013084e18113d50bb5a9642b41b417dbf07babd9 */
     idxtag=(enumname[0]=='\0') ? tag : pc_addtag(NULL); /* optional explicit item tag */
     if (needtoken(tSYMBOL)) {           /* read in (new) token */
       tokeninfo(&val,&str);             /* get the information */
@@ -3110,8 +3110,8 @@ static void decl_enum(int vclass,int fstatic)
     } else {
       constname[0]='\0';
     } /* if */
-    size=increment;                     /* default increment of 'val' */
-    fieldtag=0;                         /* default field tag */
+    size=(inctok==taADD) ? increment : 1; /* default increment of 'val' */
+    fieldtag=0;                           /* default field tag */
     if (matchtoken('[')) {
       constexpr(&size,&fieldtag,NULL);  /* get size */
       needtoken(']');
@@ -3132,7 +3132,8 @@ static void decl_enum(int vclass,int fstatic)
     sym->parent=enumsym;
     if (enumsym)
       enumsym->child=sym;
-
+    if (vclass==sLOCAL)
+      sym->compound=nestlevel;
     if (fstatic)
       sym->fnumber=filenum;
 
@@ -3141,10 +3142,12 @@ static void decl_enum(int vclass,int fstatic)
       sym->usage |= uENUMFIELD;
       append_constval(enumroot,constname,value,tag);
     } /* if */
-    if (multiplier==1)
+    if (inctok==taADD)
       value+=size;
-    else
-      value*=size*multiplier;
+    else if (inctok==taMULT)
+      value*=(size*increment);
+    else // taSHL
+      value*=(size << increment);
   } while (matchtoken(','));
   needtoken('}');       /* terminates the constant list */
   matchtoken(';');      /* eat an optional ; */
@@ -5593,8 +5596,16 @@ static int doexpr(int comma,int chkeffect,int allowarray,int mark_endexpr,
   errorset(sEXPRMARK,0);
   do {
     /* on second round through, mark the end of the previous expression */
-    if (index!=stgidx)
+    if (index!=stgidx) {
       markexpr(sEXPR,NULL,0);
+      /* also, if this is not the first expression and we are inside a "return"
+        * statement, we need to manually free the heap space allocated for the
+        * array returned by the function called in the previous expression */
+      if (pc_retexpr) {
+        modheap(pc_retheap);
+        pc_retheap=0;
+      } /* if */
+    } /* if */
     pc_sideeffect=FALSE;
     ident=expression(&val,tag,symptr,chkfuncresult);
     if (!allowarray && (ident==iARRAY || ident==iREFARRAY))
@@ -5657,6 +5668,7 @@ static int test(int label,int parens,int invert)
   int endtok;
   cell constval;
   symbol *sym;
+  short save_intest;
   int localstaging=FALSE;
 
   if (!staging) {
@@ -5668,7 +5680,7 @@ static int test(int label,int parens,int invert)
     #endif
   } /* if */
 
-  PUSHSTK_I(sc_intest);
+  save_intest=sc_intest;
   sc_intest=TRUE;
   endtok=0;
   if (parens!=TEST_PLAIN) {
@@ -5695,7 +5707,7 @@ static int test(int label,int parens,int invert)
   } /* if */
   if (ident==iCONSTEXPR) {      /* constant expression */
     int testtype=0;
-    sc_intest=(short)POPSTK_I();/* restore stack */
+    sc_intest=save_intest;      /* restore stack */
     stgdel(index,cidx);
     if (constval) {             /* code always executed */
       error(206);               /* redundant test: always non-zero */
@@ -5718,7 +5730,7 @@ static int test(int label,int parens,int invert)
   else
     jmp_eq0(label);             /* jump to label if false (equal to 0) */
   markexpr(sEXPR,NULL,0);       /* end expression (give optimizer a chance) */
-  sc_intest=(short)POPSTK_I();  /* double typecast to avoid warning with Microsoft C */
+  sc_intest=save_intest;
   if (localstaging) {
     stgout(0);                  /* output queue from the very beginning (see
                                  * assert() when localstaging is set to TRUE) */
@@ -7080,7 +7092,11 @@ static void doreturn(void)
     /* "return <value>" */
     if ((rettype & uRETNONE)!=0)
       error(78);                        /* mix "return;" and "return value;" */
+    assert(pc_retexpr==FALSE);
+    pc_retexpr=TRUE;
+    pc_retheap=0;
     ident=doexpr(TRUE,FALSE,TRUE,FALSE,&tag,&sym,TRUE);
+    pc_retexpr=FALSE;
     needtoken(tTERM);
     /* see if this function already has a sub type (an array attached) */
     sub=finddepend(curfunc);
@@ -7190,6 +7206,7 @@ static void doreturn(void)
         /* moveto1(); is not necessary, callfunction() does a popreg() */
       } /* if */
     } /* if */
+    modheap(pc_retheap);
   } else {
     /* this return statement contains no expression */
     ldconst(0,sPRI);
