@@ -5391,16 +5391,27 @@ static void statement(int *lastindent,int allow_decl)
     indent_nowarn=FALSE;        /* if warning was blocked, re-enable it */
   } /* if */
   switch (tok) {
-    /* v3.10.7, we allow empty statements. */
   case 0:
   case ';':
-    /* nothing */
+    /* A) For normal statements (like variable declarations or standalone expressions),
+     *    a lone ';' is harmless and simply ignored.
+     * B) If the parser is inside a loop (endlessloop is true), a lone ';' is not allowed
+     *    because an empty statement in a loop context may indicate a missing body.
+     *    In this case, error 36 ("empty statement") is issued.
+     * C) For other contexts such as after 'stock', 'public'
+     *    a lone ';' is allowed and treated as a valid empty statement,
+     *    and no error is reported.
+     */
+    if (endlessloop) {
+        error(36);  /* empty statement in a loop is not allowed */
+    } /* if */
+    /* nothing else to do, the statement is effectively ignored */
     break;
-  case tSTOCK:
+  case tSTOCK: /* 310 */
     error(10);                  /* invalid function or declaration */
     /* fallthrough */
-  case tNEW:
-  case tVAR:
+  case tNEW: /* 302 */
+  case tVAR: /* 313 */
     if (allow_decl) {
       declloc(FALSE);
       lastst=tVAR;
@@ -5408,7 +5419,7 @@ static void statement(int *lastindent,int allow_decl)
       error(3);                 /* declaration only valid in a block */
     } /* if */
     break;
-  case tSTATIC:
+  case tSTATIC: /* 309 */
     if (matchtoken(tENUM))
       decl_enum(sLOCAL,FALSE);
     else if (allow_decl) {
@@ -5419,45 +5430,45 @@ static void statement(int *lastindent,int allow_decl)
     } /* if */
     break;
   case '{':
-  case tBEGIN:
+  case tBEGIN: /* 282 */
     save=fline;
     if (!matchtoken('}'))       /* {} is the empty statement */
       compound(save==fline,tok);
     /* lastst (for "last statement") does not change */
     break;
-  case tIF:
+  case tIF: /* 300 */
     lastst=doif();
     break;
-  case tWHILE:
+  case tWHILE: /* 315 */
     lastst=dowhile();
     break;
-  case tDO:
+  case tDO: /* 290 */
     lastst=dodo();
     break;
-  case tFOR:
+  case tFOR: /* 297 */
     lastst=dofor();
     break;
-  case tSWITCH:
+  case tSWITCH: /* tSWITCH */
     doswitch();
     lastst=tSWITCH;
     break;
-  case tCASE:
+  case tCASE: /* 284 */
   case tDEFAULT:
     error(14);     /* not in switch */
     break;
-  case tGOTO:
+  case tGOTO: /* 299 */
     dogoto();
     lastst=tGOTO;
     break;
-  case tLABEL:
+  case tLABEL: /* 338 */
     dolabel();
     lastst=tLABEL;
     break;
-  case tRETURN:
+  case tRETURN: /* 305 */
     doreturn();
     lastst=tRETURN;
     break;
-  case tBREAK:
+  case tBREAK: /* 283 */
     dobreak();
     lastst=tBREAK;
     break;
@@ -5465,31 +5476,31 @@ static void statement(int *lastindent,int allow_decl)
     docont();
     lastst=tCONTINUE;
     break;
-  case tEXIT:
+  case tEXIT: /* 296 */
     doexit();
     lastst=tEXIT;
     break;
-  case tASSERT:
+  case tASSERT: /* 281 */
     doassert();
     lastst=tASSERT;
     break;
-  case tSLEEP:
+  case tSLEEP: /* 307 */
     dosleep();
     lastst=tSLEEP;
     break;
-  case tSTATE:
+  case tSTATE: /* 308 */
     dostate();
     lastst=tSTATE;
     break;
-  case tCONST:
+  case tCONST: /* 286 */
     decl_const(sLOCAL);
     break;
-  case tENUM:
+  case tENUM: /* 295 */
     matchtoken(tSTATIC);
     decl_enum(sLOCAL,FALSE);
     break;
-  case tEMIT:
-  case t__EMIT: {
+  case tEMIT: /* 292 */
+  case t__EMIT: /* 293 */ {
     extern char *sc_tokens[];
     const unsigned char *bck_lptr=lexptr-strlen(sc_tokens[tok-tFIRST]);
     if (matchtoken('{')) {
