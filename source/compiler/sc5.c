@@ -530,6 +530,10 @@ static constvalue *find_closeststate(const char *name,int fsa)
 static constvalue *findclosest_automaton_for_state(const char *statename,int fsa)
 {
   constvalue *ptr=sc_state_tab.first;
+  if (ptr==NULL) {
+    error(76);                /* invalid function call, or syntax error */
+    return NULL;
+  } /* if */
   constvalue *closestmatch=NULL;
   constvalue *automaton;
   const char *fsaname;
@@ -538,6 +542,10 @@ static constvalue *findclosest_automaton_for_state(const char *statename,int fsa
   assert(statename!=NULL);
   maxdist=get_maxdist(statename);
   automaton=automaton_findid(ptr->index);
+  if (automaton==NULL) {
+    error(76);                /* invalid function call, or syntax error */
+    return NULL;
+  } /* if */
   assert(automaton!=NULL);
   fsaname=automaton->name;
   while (ptr!=NULL) {

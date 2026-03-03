@@ -5393,19 +5393,11 @@ static void statement(int *lastindent,int allow_decl)
   switch (tok) {
   case 0:
   case ';':
-    /* A) For normal statements (like variable declarations or standalone expressions),
-     *    a lone ';' is harmless and simply ignored.
-     * B) If the parser is inside a loop (endlessloop is true), a lone ';' is not allowed
-     *    because an empty statement in a loop context may indicate a missing body.
-     *    In this case, error 36 ("empty statement") is issued.
-     * C) For other contexts such as after 'stock', 'public'
-     *    a lone ';' is allowed and treated as a valid empty statement,
-     *    and no error is reported.
-     */
-    if (endlessloop) {
-        error(36);  /* empty statement in a loop is not allowed */
+    /* the empty statement ';' is not allowed in an infinite loop */
+    if (endlessloop!=0) {
+        error(36);              /* empty statement */
     } /* if */
-    /* nothing else to do, the statement is effectively ignored */
+    /* nothing */
     break;
   case tSTOCK: /* 310 */
     error(10);                  /* invalid function or declaration */

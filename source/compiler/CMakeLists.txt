@@ -155,8 +155,13 @@ if(UNIX)
   target_link_libraries(pawndisasm dl)
 endif()
 
+# Utility to create GraphViz "dot" files from the XML report (if the report contains states)
+SET(STATEGRAPH_SRCS stategraph.c ezxml.c)
+ADD_EXECUTABLE(stategraph ${STATEGRAPH_SRCS})
+TARGET_COMPILE_DEFINITIONS(stategraph PUBLIC EZXML_NOMMAP)
+
 # Install compiler and disassembler binaries
-install(TARGETS pawnc pawncc pawndisasm
+install(TARGETS pawnc pawncc stategraph pawndisasm
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib)
 if(MSVC)
