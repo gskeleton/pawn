@@ -309,7 +309,6 @@ static short lastfile;
   } else {
     FILE *fp=fopen(errfname,"a");
     if (fp!=NULL) {
-      setvbuf(stdout,NULL,_IONBF,0);
       if (errstart>=0 && errstart!=errline)
         fprintf(fp,"%s(%d..%d) : %s %03d: ",inpfname,errstart,errline,pre,(int)number);
       else
