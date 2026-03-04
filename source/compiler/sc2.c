@@ -1321,7 +1321,8 @@ static int command(void)
         } else if (strcmp(str,"once")==0) {
           pragma_once_guard();
         } else if (strcmp(str,"compat")==0) {
-          ; /* empty statement - ignore */
+          /* nothing */
+          ;
         } else if (strcmp(str,"option")==0) {
           char name[sNAMEMAX+1];
           int i;
