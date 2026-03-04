@@ -7,8 +7,13 @@ project(pawnc C)
 # During compilation, the Pawn compiler encodes jumps and labels (do_jump()),
 #  and LTO (Link Time Optimization) changes how the compiler arranges code and data.
 #  This can make label indices (lbltab[i]) invalid or point to unexpected memory, triggering a crash.
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -funroll-loops -finline-functions -falign-loops -falign-functions")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -funroll-loops -falign-loops -finline-functions -falign-functions")
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")     # GNU/Linux
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -funroll-loops -finline-functions -falign-loops -falign-functions")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -funroll-loops -falign-loops -finline-functions -falign-functions")
+else()                                     # Android NDK/Visual Studio
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake)
 

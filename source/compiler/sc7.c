@@ -1406,8 +1406,6 @@ SC_FUNC void stgwrite(const char *st)
  */
 SC_FUNC void stgout(int index)
 {
-  int idx;
-
   if (!staging)
     return;
   assert(pipeidx==0);
@@ -1758,8 +1756,6 @@ static void strreplace(char *dest,char *replace,int sub_length,int repl_length,i
 static void stgopt(char *start,char *end,int packed_opc,int (*outputfunc)(char *str))
 {
   char symbols[MAX_OPT_VARS][MAX_ALIAS+1];
-  int seq,match_length,repl_length;
-  int matches;
   char *debut=start;  /* save original start of the buffer */
 
   assert(sequences!=NULL);

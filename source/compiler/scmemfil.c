@@ -75,6 +75,7 @@ size_t mflength(const MEMFILE *mf)
 long mfseek(MEMFILE *mf,long offset,int whence)
 {
   size_t length;
+  long newpos;
 
   assert(mf!=NULL);
 
@@ -87,29 +88,32 @@ long mfseek(MEMFILE *mf,long offset,int whence)
   length=mflength(mf);
 
   /* convert the offset to an absolute position */
-  switch (whence) {
+  switch(whence) {
   case SEEK_SET:
-    break;
+      break;
   case SEEK_CUR:
-    offset+=mf->offs;
-    break;
+      offset+=(long)mf->offs;
+      break;
   case SEEK_END:
-    assert(offset<=0);
-    offset+=length;
-    break;
+      /* offset expected to be <=0 */
+      assert(offset<=0);
+      offset+=(long)length;
+      break;
   default:
-    return -1L;   /* invalid whence */
-  } /* switch */
+      return -1L;   /* invalid whence */
+  }
 
   /* clamp to the file length limit */
   if (offset<0)
-    offset=0;
-  else if (offset>length)
-    offset=length;
+      newpos=0;
+  else if (offset>(long)length)
+      newpos=(long)length;
+  else
+      newpos=offset;
 
   /* set new position and return it */
-  memfile_seek(mf, offset);
-  return offset;
+  memfile_seek(mf,newpos);
+  return newpos;
 }
 
 size_t mfwrite(MEMFILE *mf,const unsigned char *buffer,unsigned int size)
@@ -147,7 +151,7 @@ char *mfgets(MEMFILE *mf,char *string,unsigned int size)
   /* find the first '\n' */
   ptr=strchr(string,'\n');
   if (ptr!=NULL) {
-   if ((ptr-string)+1<size)
+  if ((size_t)((ptr-string)+1)<size)
     *(ptr+1)='\0';
     seek=(long)(ptr-string)+1-(long)read;
   } /* if */
@@ -162,9 +166,6 @@ char *mfgets(MEMFILE *mf,char *string,unsigned int size)
 
 int mfputs(MEMFILE *mf,const char *string)
 {
-  size_t written;
-  unsigned int length;
-
   if (!mf || !string)
     return 0;
 

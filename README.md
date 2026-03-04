@@ -6,16 +6,22 @@ This is a modified copy of the Pawn compiler version 3.2.3664 by Compuphase that
 
 ## Why does this repository need to be created?
 
-gskeleton/pawn is a repository of the Pawn Compiler from [pawn-lang/compiler](https://github.com/pawn-lang/compiler), based on [Pawn Compiler v3.10.7](https://github.com/pawn-lang/compiler/releases/tag/v3.10.7), which has been specifically modified and intentionally adjusted to support more flexible and faster updates. In addition, fixes from other versions are backported into v3.10.7 in gskeleton/pawn without requiring the use of a higher compiler version. This compiler also resolves unexpected issues by changing the concept of pc_compat and removing pc_compat entirely - [commit](https://github.com/gskeleton/pawn/commit/559e6a1c36b238d5d2d973c029fb39185a7f0bfa).
+[gskeleton/pawn](https://github.com/gskeleton/pawn) is a repository of the Pawn Compiler from [pawn-lang/compiler](https://github.com/pawn-lang/compiler), based on [Pawn Compiler v3.10.7](https://github.com/pawn-lang/compiler/releases/tag/v3.10.7), which has been specifically modified and intentionally adjusted to support more flexible and faster updates. In addition, fixes from other versions are backported into v3.10.7 in gskeleton/pawn without requiring the use of a higher compiler version. This compiler also resolves unexpected issues by changing the concept of pc_compat and removing pc_compat entirely - [commit](https://github.com/gskeleton/pawn/commit/559e6a1c36b238d5d2d973c029fb39185a7f0bfa).
 
 ## Installation on Windows or GNU/Linux
 
 1. Extract the .zip or .tar.gz archive from [Releases](https://github.com/gskeleton/pawn/releases)
 2. and install the files from the bin folder into pawno or qawno.
 3. Additionally, install libpawnc.so for Linux systems into the /usr/local/lib directory as shown below:
+- Linux:
 ```yml
 sudo mv libpawnc.so /usr/local/lib
 sudo echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib" >> ~/.bashrc && source ~/.bashrc
+```
+- Termux:
+```yml
+mv libpawnc.so /data/data/com.termux/files/usr/local/lib
+echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/data/com.termux/files/usr/local/lib" >> ~/.bashrc && source ~/.bashrc
 ```
 4. Once completed, you can run pawncc.exe or `./pawncc.`
 
@@ -25,31 +31,25 @@ In general you will need [CMake](https://cmake.org/) and a C compiller to build 
 
 ### Building on Windows
 
-* Clone this repo: `git clone https://github.com/Zeex/pawn.git C:\pawn` (you can use another directory instead of `C:\Pawn`, but make sure the path doesn't have spaces).
-* Install [Visual Studio Community](https://www.visualstudio.com/vs/community/), it's free.
-* Install [CMake](https://cmake.org/).
+* Download: https://github.com/gskeleton/pawn/archive/refs/heads/main.zip
+* Extract the Archive.
+* Open the "pawn" folder in Visual Studio.
 
-  When installing make sure to check "Add CMake to system PATH" to make your life easier.
+  From the "Tools" menu in Visual Studio, open Command Prompt or PowerShell and execute the following:
 
-* Generate a Visual Studio project.
-
-  In Command promprt or Powershell execute the following:
-
-  ```cmd
+  ```yml
   cd pawn/source/compiler
   mkdir build; cd build
   cmake .. -A Win32; cmake --build . --config Release
   ```
 
-  or open the pawnc.sln in Visual Studio and build from there (but make sure to choose the "Release" configuration).
-
-  This will create `pawnc.dll` and `pawncc.exe` in the `Release` folder. You can now copy these files to your `pawno` folder for convenience or put them in a separate folder and configure your code editor accordingly.
-
+  This will create `pawnc.dll` and `pawncc.exe` in the `Release` folder.
+  
 ### Building on Linux
 
 Use your distribution's package manager to install the required dependencies. For example, in Ubuntu you would do:
 
-```sh
+```yml
 sudo apt install gcc gcc-multilib make cmake
 ```
 
@@ -57,7 +57,7 @@ sudo apt install gcc gcc-multilib make cmake
 
 Now you can clone this repo and build the compiler:
 
-```sh
+```yml
 git clone https://github.com/gskeleton/pawn &&
 cd pawn/source/compiler &&
 mkdir build && cd build &&

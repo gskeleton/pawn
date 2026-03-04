@@ -317,8 +317,6 @@ static void check_empty(const unsigned char *lexptr)
 static void doinclude(int silent)
 {
   char name[_MAX_PATH];
-  char symname[sNAMEMAX];
-  char *ptr;
   char c;
   int i, result;
 
@@ -1588,7 +1586,9 @@ static int command(void)
   } /* switch */
   return ret;
 _unknown_pragma:       /* unknown #pragma */
-  error(207); 
+  error(207);
+  ret=CMD_NONE;
+  return ret; 
 }
 
 #if !defined NO_DEFINE

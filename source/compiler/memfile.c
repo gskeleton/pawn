@@ -63,10 +63,10 @@ void memfile_destroy(memfile_t *mf)
 void memfile_seek(memfile_t *mf, long seek)
 {
 	assert(mf != NULL);
-	if (seek < 0)
+    if (seek < 0)
 		seek = 0;
-	if ((size_t)seek > mf->usedoffs)
-		seek = mf->usedoffs;
+    if (seek > (long)mf->usedoffs)
+		seek = (long)mf->usedoffs;
 
 	mf->offs = (size_t)seek;
 }
