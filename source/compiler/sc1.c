@@ -1520,7 +1520,7 @@ static void setconfig(const char *root)
 
 static void setcaption(void)
 {
-  fputs("Pawn compiler " VERSION_STR "\t \t \tCopyright (c) 1997-2026, ITB CompuPhase\n\n", stdout);
+  fputs("Pawn compiler " VERSION_STR " (3.2.3664)" "\t \t \tCopyright (c) 1997-2026, ITB CompuPhase\n\n", stdout);
 }
 
 static void about(void)
