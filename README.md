@@ -61,7 +61,7 @@ Now you can clone this repo and build the compiler:
 git clone https://github.com/gskeleton/pawn &&
 cd pawn/source/compiler &&
 mkdir build && cd build &&
-cmake .. -DCMAKE_C_STANDARD=99 -DCMAKE_C_FLAGS=-m32 -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_C_STANDARD=99 -DCMAKE_C_FLAGS=-m32 -DCMAKE_BUILD_TYPE=Release; make
 ```
 
 Replace "Release" with "Debug" if you want to build a debug executable for development or submitting bugs.
