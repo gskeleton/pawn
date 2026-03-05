@@ -1260,7 +1260,10 @@ static int command(void)
             sc_tabsize=(int)val;
         } else if (strcmp(str,"align")==0) {
           sc_alignnext=TRUE;
-        } else if (strcmp(str,"unused")==0) {
+        } else if (strcmp(str,"unused")==0 || strcmp(str,"unread")==0 || strcmp(str,"unwritten")==0) {
+          int read,write;
+          read=str[2]=='w' ? 0 : uREAD;
+          write=str[2]=='r' ? 0 : uWRITTEN;
           char name[sNAMEMAX+1];
           int i,comma;
           symbol *sym;
@@ -1276,10 +1279,11 @@ static int command(void)
             if (sym==NULL)
               sym=findglb(name,sSTATEVAR);
             if (sym!=NULL) {
-              sym->usage |= uREAD;
+              /* mark as read if the pragma wasn't `unwritten` */
+              sym->usage |= read;
               if (sym->ident==iVARIABLE || sym->ident==iREFERENCE
                   || sym->ident==iARRAY || sym->ident==iREFARRAY)
-                sym->usage |= uWRITTEN;
+                sym->usage |= write;
             } else {
               error(17,name);     /* undefined or undeclared symbol */
             } /* if */
