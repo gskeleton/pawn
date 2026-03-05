@@ -303,21 +303,6 @@ int pc_compile(int argc, char *argv[])
       fline++;                  /* keep line number up to date */
   skipinput=fline;
   sc_status=statFIRST;
-  /* write starting options (from the command line or the configuration file) */
-  if (sc_listing) {
-    char string[150];
-    (void)snprintf(string,sizeof(string),
-                   "#pragma ctrlchar 0x%02x\n"
-                   "#pragma pack %s\n"
-                   "#pragma semicolon %s\n"
-                   "#pragma tabsize %d\n",
-            sc_ctrlchar,
-            sc_packstr ? "true" : "false",
-            sc_needsemicolon ? "true" : "false",
-            sc_tabsize);
-    pc_writeasm(outf,string);
-  } /* if */
-  setfiledirect(inpfname);
   /* do the first pass through the file (or possibly two or more "first passes") */
   sc_parsenum=0;
   inpfmark=pc_getpossrc(inpf_org);
@@ -358,7 +343,10 @@ int pc_compile(int argc, char *argv[])
   } while (sc_reparse);
 
   /* second (or third) pass */
-  sc_status=statWRITE;                  /* set, to enable warnings */
+  if (sc_listing)
+    sc_status=statSECOND;
+  else
+    sc_status=statWRITE;                  /* set, to enable warnings */
   state_conflict(&glbtab);
 
   /* write a report, if requested */
@@ -379,8 +367,21 @@ int pc_compile(int argc, char *argv[])
     } /* if */
   #endif
   
-  if (sc_listing)
-    goto cleanup;
+  /* write starting options (from the command line or the configuration file) */
+  if (sc_listing) {
+    char string[150];
+    (void)snprintf(string,sizeof(string),
+                   "#pragma ctrlchar 0x%02x\n"
+                   "#pragma pack %s\n"
+                   "#pragma semicolon %s\n"
+                   "#pragma tabsize %d\n",
+            sc_ctrlchar,
+            sc_packstr ? "true" : "false",
+            sc_needsemicolon ? "true" : "false",
+            sc_tabsize);
+    pc_writeasm(outf,string);
+  } /* if */
+  setfiledirect(inpfname);
 
   /* ??? for re-parsing the listing file instead of the original source
    * file (and doing preprocessing twice):
@@ -396,10 +397,6 @@ int pc_compile(int argc, char *argv[])
     delete_substtable();
   #endif
   resetglobals();
-  sc_ctrlchar=sc_ctrlchar_org;
-  sc_packstr=lcl_packstr;
-  sc_needsemicolon=lcl_needsemicolon;
-  sc_tabsize=lcl_tabsize;
   errorset(sRESET,0);
   /* reset the source file */
   inpf=inpf_org;
@@ -408,6 +405,10 @@ int pc_compile(int argc, char *argv[])
   fline=skipinput;              /* reset line number */
   lexinit();                    /* clear internal flags of lex() */
   sc_status=statWRITE;          /* allow to write --this variable was reset by resetglobals() */
+  if (sc_listing)
+    sc_status=statSECOND;
+  else
+    sc_status=statWRITE;          /* allow to write --this variable was reset by resetglobals() */
   writeleader(&glbtab);
   setstringconstants();
   setfileconst(inpfname);
@@ -420,6 +421,8 @@ int pc_compile(int argc, char *argv[])
   } /* if */
   preprocess();                         /* fetch first line */
   parse();                              /* process all input */
+  if (sc_listing)
+    goto cleanup;
   /* inpf is already closed when readline() attempts to pop of a file */
   writetrailer();                       /* write remaining stuff */
 
